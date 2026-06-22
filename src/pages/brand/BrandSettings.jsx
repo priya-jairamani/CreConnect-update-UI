@@ -171,7 +171,8 @@ export default function BrandSettings() {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
-  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'saving' | 'unsaved'
+  const [saveStatus,    setSaveStatus]    = useState('saved'); // 'saved' | 'saving' | 'unsaved'
+  const [savingGuidelines, setSavingGuidelines] = useState(false);
 
   const sectionRefs = useRef({});
   const saveTimerRef = useRef(null);
@@ -332,6 +333,23 @@ export default function BrandSettings() {
     toast.info('Team member removed');
   };
 
+  const handleSaveGuidelines = async () => {
+    setSavingGuidelines(true);
+    try {
+      await brandsApi.updateProfile({
+        contentGuidelines:  formState.brandSafety.contentGuidelines,
+        blockedCategories:  formState.brandSafety.blockedCategories,
+        restrictedKeywords: formState.brandSafety.restrictedKeywords ?? [],
+        fraudDetection:     formState.brandSafety.fraudDetection,
+      });
+      toast.success('Content guidelines saved.');
+    } catch {
+      toast.error('Failed to save guidelines.');
+    } finally {
+      setSavingGuidelines(false);
+    }
+  };
+
   const handleDangerAction = (key) => {
     const messages = {
       export: 'Preparing your data export — we’ll email you a download link.',
@@ -441,7 +459,7 @@ export default function BrandSettings() {
 
           <div ref={(el) => { sectionRefs.current['payment'] = el; }}>
             <SettingsSectionCard id="payment" icon="💳" title="Payment Settings" subtitle="Financial center, payouts, and escrow">
-              <PaymentSection values={formState.payment} onChange={(f, v) => update('payment', f, v)} financials={financials} paymentMethods={paymentMethods} />
+              <PaymentSection values={formState.payment} onChange={(f, v) => update('payment', f, v)} financials={financials} />
             </SettingsSectionCard>
           </div>
 
@@ -471,7 +489,7 @@ export default function BrandSettings() {
 
           <div ref={(el) => { sectionRefs.current['brand-safety'] = el; }}>
             <SettingsSectionCard id="brand-safety" icon="🛡️" title="Brand Safety" subtitle="Content guidelines and creator screening" defaultOpen={false}>
-              <BrandSafetySection values={formState.brandSafety} onChange={(f, v) => update('brandSafety', f, v)} />
+              <BrandSafetySection values={formState.brandSafety} onChange={(f, v) => update('brandSafety', f, v)} onSave={handleSaveGuidelines} isSaving={savingGuidelines} />
             </SettingsSectionCard>
           </div>
 

@@ -265,7 +265,9 @@ export default function CreatorInfo() {
       const payload = {};
       BACKEND_FIELDS.forEach((f) => { payload[f] = values[f]; });
       if (payload.budgetMin !== '') payload.budgetMin = Number(payload.budgetMin) || 0;
-      await creatorsApi.updateProfile(payload);
+      const { data: updated } = await creatorsApi.updateProfile(payload);
+      // Sync avatar URL from the server response to keep UI consistent
+      if (updated?.avatarUrl) setAvatarUrl(updated.avatarUrl);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -301,7 +303,8 @@ export default function CreatorInfo() {
           payload[f] = values[f];
         }
       });
-      await creatorsApi.updateProfile(payload);
+      const { data: updated } = await creatorsApi.updateProfile(payload);
+      if (updated?.avatarUrl) setAvatarUrl(updated.avatarUrl);
       setSectionStatus((s) => ({ ...s, [key]: 'idle' }));
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'Save failed');

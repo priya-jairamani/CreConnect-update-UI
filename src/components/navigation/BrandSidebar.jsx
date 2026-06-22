@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotification } from '@/hooks/useNotification';
+import { useMessageCount } from '@/hooks/useMessageCount';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import Logo from '@/components/common/Logo';
 
@@ -20,6 +21,7 @@ const NAV = [
 export default function BrandSidebar() {
   const { logout, user } = useAuth();
   const { unreadCount }  = useNotification();
+  const msgCount         = useMessageCount();
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'BR';
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -79,17 +81,33 @@ export default function BrandSidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-0.5" style={{ padding: c ? '12px 8px' : '12px' }}>
         {!c && <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-widest px-2 mb-2 mt-1">Menu</p>}
-        {NAV.map(({ icon, label, to }) => (
-          <NavLink
-            key={to}
-            to={to}
-            title={c ? label : undefined}
-            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}${c ? ' !px-0 justify-center' : ''}`}
-          >
-            <span className="text-base flex-shrink-0 leading-none" style={{ width: c ? 'auto' : 20 }}>{icon}</span>
-            {!c && <span className="truncate">{label}</span>}
-          </NavLink>
-        ))}
+        {NAV.map(({ icon, label, to }) => {
+          const isMessages = to === ROUTES.BRAND_MESSAGES;
+          const badge      = isMessages && msgCount > 0 ? msgCount : 0;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              title={c ? `${label}${badge ? ` (${badge})` : ''}` : undefined}
+              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}${c ? ' !px-0 justify-center' : ''}`}
+            >
+              <span className="text-base flex-shrink-0 leading-none relative" style={{ width: c ? 'auto' : 20 }}>
+                {icon}
+                {c && badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[8px] font-bold text-white flex items-center justify-center" style={{ background: 'var(--brand-500)' }}>
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
+              {!c && <span className="truncate">{label}</span>}
+              {!c && badge > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{ background: 'var(--brand-500)' }}>
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* Footer */}

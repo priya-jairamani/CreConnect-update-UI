@@ -152,9 +152,11 @@ function ApplicationRow({ app, onWithdraw }) {
 
   const statusMeta = {
     PENDING:   { label: 'Pending Review', variant: 'warning' },
-    ACCEPTED:  { label: 'Accepted',       variant: 'success' },
-    REJECTED:  { label: 'Rejected',       variant: 'danger'  },
+    INVITED:   { label: 'Invited',        variant: 'brand'   },
+    ACCEPTED:  { label: 'Accepted ✓',     variant: 'success' },
+    REJECTED:  { label: 'Not Selected',   variant: 'danger'  },
     WITHDRAWN: { label: 'Withdrawn',      variant: 'neutral' },
+    COMPLETED: { label: 'Completed',      variant: 'success' },
   }[app.status ?? 'PENDING'] ?? { label: app.status, variant: 'neutral' };
 
   async function handleWithdraw() {
@@ -395,11 +397,11 @@ export default function CreatorCampaigns() {
     setLoadingColl(false);
   }, []);
 
-  /* ── Load applications (PENDING status) ── */
+  /* ── Load applications (all statuses) ── */
   const loadApplications = useCallback(async () => {
     setLoadingApps(true);
     try {
-      const { data } = await creatorsApi.getCollaborations({ status: 'PENDING' });
+      const { data } = await creatorsApi.getApplications();
       setApplications(Array.isArray(data) ? data : (data?.data ?? []));
     } catch {
       setApplications([]);
@@ -419,10 +421,19 @@ export default function CreatorCampaigns() {
   const completedCollabs = useMemo(() => collabs.filter((c) => c.status === 'COMPLETED'), [collabs]);
   const totalEarned      = useMemo(() => completedCollabs.reduce((s, c) => s + (c.offerAmountPKR ?? 0), 0), [completedCollabs]);
 
+  // Campaign IDs the creator has already applied to or been invited for — hide from Discover
+  const engagedCampaignIds = useMemo(() =>
+    new Set([
+      ...applications.map((a) => a.campaignId ?? a.campaign?.id).filter(Boolean),
+      ...offers.map((o) => o.campaignId ?? o.campaign?.id).filter(Boolean),
+    ]),
+  [applications, offers]);
+
   /* ── Filtered discover list ── */
   const selectedBudget = BUDGET_OPTS.find((b) => b.label === budget) ?? BUDGET_OPTS[0];
   const filteredCampaigns = useMemo(() => {
-    let list = [...campaigns];
+    // Exclude campaigns already applied to or invited for
+    let list = campaigns.filter((c) => !engagedCampaignIds.has(c.id));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((c) => (c.title ?? '').toLowerCase().includes(q) || (c.brand?.companyName ?? '').toLowerCase().includes(q) || (c.niche ?? '').toLowerCase().includes(q));
@@ -467,17 +478,16 @@ export default function CreatorCampaigns() {
   }, [toast]);
 
   const handleAcceptOffer = useCallback(async (offer) => {
-    const campaign = offer.campaign ?? {};
-    await campaignsApi.apply(campaign.id, { note: 'Accepting your invitation.' });
-    setAppliedIds((prev) => new Set([...prev, campaign.id]));
+    await campaignsApi.respondToInvitation(offer.id, 'accept');
     setOffers((prev) => prev.filter((o) => o.id !== offer.id));
-    toast.success('Invitation accepted!');
+    toast.success('Invitation accepted! The brand has been notified.');
     loadCollabs();
   }, [toast, loadCollabs]);
 
   const handleDeclineOffer = useCallback(async (offer) => {
+    await campaignsApi.respondToInvitation(offer.id, 'reject');
     setOffers((prev) => prev.filter((o) => o.id !== offer.id));
-    toast.info('Invitation declined.');
+    toast.info('Invitation declined. The brand has been notified.');
   }, [toast]);
 
   const openDrawer = (campaign) => { setDrawerCampaign(campaign); setDrawerOpen(true); };

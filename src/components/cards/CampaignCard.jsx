@@ -22,12 +22,12 @@ export default function CampaignCard({ campaign, onViewDetails }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <h3
-          className="font-semibold text-fg text-base leading-snug"
+          className="font-semibold text-fg text-base leading-snug min-w-0 line-clamp-2"
           style={{ fontFamily: 'Sora, sans-serif' }}
         >
           {campaign.title}
         </h3>
-        <Badge status={campaign.status} />
+        <Badge status={campaign.status} className="flex-shrink-0" />
       </div>
 
       {/* Budget */}

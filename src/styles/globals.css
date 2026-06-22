@@ -64,6 +64,38 @@
   background-size: 200% 100%;
 }
 
+/* ── Light-theme fixes for dark-only hover / border colours ── */
+
+/* Sidebar hover: rgba(255,255,255,0.05) is invisible on a white background */
+[data-theme='light'] .sidebar-link:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--fg);
+}
+[data-theme='light'] .sidebar-link.active {
+  background: rgba(109, 92, 255, 0.10);
+}
+
+/* Input border hover: rgba(255,255,255,0.15) is invisible on white */
+[data-theme='light'] .input-base:hover:not(:focus) {
+  border-color: rgba(15, 23, 42, 0.20);
+}
+
+/* Scrollbar thumb hover */
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.15);
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.30);
+}
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: var(--surface-2);
+}
+
+/* Card hover shadow is too dark on light bg */
+[data-theme='light'] .card-hover:hover {
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.10);
+}
+
 [data-theme='light'] .mesh-bg {
   background:
     radial-gradient(60% 60% at 18% 12%, rgba(109, 92, 255, 0.10) 0, transparent 62%),

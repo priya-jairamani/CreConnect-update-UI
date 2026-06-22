@@ -78,8 +78,8 @@ export default function ProposalWizard({ proposal, onChange, selectedCreators, l
         })}
       </div>
 
-      {/* Step content */}
-      <div>
+      {/* Step content — scrollable so the stepper + nav buttons stay in view */}
+      <div className="overflow-y-auto pr-1" style={{ maxHeight: '58vh' }}>
         {step.key === 'outreach' ? (
           <OutreachStep proposal={proposal} onChange={onChange} selectedCreators={selectedCreators} />
         ) : (

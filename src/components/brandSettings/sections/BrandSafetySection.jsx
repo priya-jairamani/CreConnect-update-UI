@@ -7,7 +7,7 @@ import Badge from '@/components/common/Badge';
 
 const BLOCKED_CATEGORIES = ['Adult Content', 'Gambling', 'Alcohol', 'Tobacco', 'Politics', 'Controversial Topics'];
 
-export default function BrandSafetySection({ values, onChange }) {
+export default function BrandSafetySection({ values, onChange, onSave, isSaving }) {
   const [keywordInput, setKeywordInput] = useState('');
 
   const addKeyword = () => {
@@ -62,6 +62,13 @@ export default function BrandSafetySection({ values, onChange }) {
           onChange={(e) => onChange('contentGuidelines', e.target.value)}
           placeholder="Describe tone, style, and brand-safety expectations for creator content."
         />
+        {onSave && (
+          <div className="flex justify-end mt-3">
+            <Button variant="primary" size="sm" isLoading={isSaving} onClick={onSave}>
+              Save Guidelines
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
@@ -98,6 +105,8 @@ export default function BrandSafetySection({ values, onChange }) {
 }
 
 BrandSafetySection.propTypes = {
-  values: PropTypes.object.isRequired,
+  values:   PropTypes.object.isRequired,
   onChange: PropTypes.func.isRequired,
+  onSave:   PropTypes.func,
+  isSaving: PropTypes.bool,
 };

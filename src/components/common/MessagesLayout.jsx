@@ -230,6 +230,8 @@ export default function MessagesLayout({ resolveOther, sidebarTitle }) {
   const [typing,        setTyping]        = useState(false);
   const [otherOnline,   setOtherOnline]   = useState(false);
   const [otherLastSeen, setOtherLastSeen] = useState(null);
+  // Persist last-seen across conversation switches
+  const lastSeenRef = useRef({});  // { [userId]: ISO string }
 
   /* Call */
   const [callType,  setCallType]  = useState(null);
@@ -258,9 +260,12 @@ export default function MessagesLayout({ resolveOther, sidebarTitle }) {
             : c
         ));
       },
-      'user-online':  ({ userId }) => { if (userId === otherUserId) setOtherOnline(true); },
-      'user-offline': ({ userId, lastSeen }) => {
-        if (userId === otherUserId) { setOtherOnline(false); setOtherLastSeen(lastSeen); }
+      'user-online':  ({ userId: uid }) => {
+        if (uid === otherUserId) { setOtherOnline(true); setOtherLastSeen(null); }
+      },
+      'user-offline': ({ userId: uid, lastSeen }) => {
+        lastSeenRef.current[uid] = lastSeen;          // persist across switches
+        if (uid === otherUserId) { setOtherOnline(false); setOtherLastSeen(lastSeen); }
       },
       'typing':      ({ conversationId, userId }) => { if (conversationId === activeId && userId !== user?.id) setTyping(true); },
       'stop-typing': ({ conversationId, userId }) => { if (conversationId === activeId && userId !== user?.id) setTyping(false); },
@@ -285,15 +290,20 @@ export default function MessagesLayout({ resolveOther, sidebarTitle }) {
   useEffect(() => {
     if (!activeId) return;
     setOtherOnline(false);
-    setOtherLastSeen(null);
+    // Restore persisted last-seen for this conversation's other participant
+    setOtherLastSeen(otherUserId ? (lastSeenRef.current[otherUserId] ?? null) : null);
     setTyping(false);
     emit('join-conversation', activeId);
     messagesApi.getMessages(activeId)
       .then(({ data }) => setMessages(Array.isArray(data) ? data : (data?.data ?? [])))
       .catch(() => setMessages([]));
+    // Mark conversation as read locally and on the backend, then refresh the sidebar count
     setConversations(p => p.map(c => c.id === activeId ? { ...c, unread: 0 } : c));
+    messagesApi.markRead(activeId)
+      .then(() => window.dispatchEvent(new Event('cc:messages:read')))
+      .catch(() => {});
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [activeId, emit]);
+  }, [activeId, emit, otherUserId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

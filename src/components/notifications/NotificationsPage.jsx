@@ -1,11 +1,21 @@
-import { useState, useMemo } from 'react';
-import { useNotification } from '@/hooks/useNotification';
+import { useState, useMemo, useEffect } from 'react';
+import { useNotificationContext } from '@/context/NotificationContext';
 import NotificationItem, { FILTER_TABS, getCategory } from '@/components/notifications/NotificationItem';
 import Button from '@/components/common/Button';
 import EmptyState from '@/components/common/EmptyState';
 
 export default function NotificationsPage() {
-  const { notifications, unreadCount, markRead, markAllRead, isLoading } = useNotification();
+  // Use context directly — the sidebar already triggers fetchNotifications() on mount.
+  // Re-fetching here would overwrite locally-pushed notifications and flicker the count.
+  const { notifications, unreadCount, markRead, markAllRead, isLoading } = useNotificationContext();
+
+  // Mark all as read 2 seconds after the page is opened so the user can see them first
+  useEffect(() => {
+    if (unreadCount === 0) return;
+    const t = setTimeout(() => markAllRead(), 2000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [filter, setFilter] = useState('all');
 
   const filtered = useMemo(() => {

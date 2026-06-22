@@ -77,31 +77,67 @@ const DEMO_BRAND_ANALYTICS = {
 const EMPTY_LIST = { data: [], pagination: { total: 0, page: 1, limit: 20 } };
 
 const SPECIFIC_MOCKS = [
+  // ── Creator profile & stats ───────────────────────────────────
   { method: 'get', pattern: /\/creators\/me$/, data: DEMO_CREATOR_PROFILE },
-  { method: 'get', pattern: /\/brands\/me$/, data: DEMO_BRAND_PROFILE },
   { method: 'get', pattern: /\/creators\/me\/stats$/, data: DEMO_CREATOR_STATS },
-  { method: 'get', pattern: /\/brands\/me\/stats$/, data: DEMO_BRAND_STATS },
   { method: 'get', pattern: /\/creators\/me\/collaborations/, data: EMPTY_LIST },
-  { method: 'get', pattern: /\/brands\/me\/campaigns/, data: EMPTY_LIST },
   { method: 'get', pattern: /\/creators\/me\/offers/, data: [] },
+  { method: 'get', pattern: /\/creators\/me\/applications/, data: [] },
+  { method: 'get', pattern: /\/creators\/me\/media/, data: [] },
+  { method: 'get', pattern: /\/creators\/me\/platforms/, data: [] },
+  { method: 'get', pattern: /\/creators\/[^/]+$/, data: { ...DEMO_CREATOR_PROFILE, collaborations: [], reviews: [] } },
+
+  // ── Brand profile & stats ─────────────────────────────────────
+  { method: 'get', pattern: /\/brands\/me$/, data: DEMO_BRAND_PROFILE },
+  { method: 'get', pattern: /\/brands\/me\/stats$/, data: DEMO_BRAND_STATS },
+  { method: 'get', pattern: /\/brands\/me\/campaigns/, data: EMPTY_LIST },
+  { method: 'get', pattern: /\/brands\/me\/collaborations/, data: EMPTY_LIST },
+  { method: 'get', pattern: /\/brands\/me\/applications/, data: EMPTY_LIST },
+  { method: 'get', pattern: /\/brands\/list/, data: EMPTY_LIST },
+  { method: 'get', pattern: /\/brands\/me\/media/, data: [] },
+
+  // ── Analytics ─────────────────────────────────────────────────
   { method: 'get', pattern: /\/analytics\/creator$/, data: DEMO_CREATOR_ANALYTICS },
   { method: 'get', pattern: /\/analytics\/brand$/, data: DEMO_BRAND_ANALYTICS },
   { method: 'get', pattern: /\/analytics\/admin$/, data: { metrics: {} } },
-  { method: 'get', pattern: /\/matching\/recommended/, data: [] },
-  { method: 'get', pattern: /\/matching\/campaign\//, data: [] },
-  { method: 'get', pattern: /\/notifications\/unread-count/, data: { count: 0 } },
-  { method: 'get', pattern: /\/notifications/, data: [] },
-  { method: 'get', pattern: /\/messages\/conversations\/[^/]+\/messages/, data: { data: [] } },
-  { method: 'get', pattern: /\/messages\/conversations/, data: { data: [] } },
+
+  // ── Campaigns ─────────────────────────────────────────────────
   { method: 'get', pattern: /\/campaigns\/[^/]+\/applications/, data: { data: [] } },
   { method: 'get', pattern: /\/campaigns$/, data: EMPTY_LIST },
   { method: 'get', pattern: /\/campaigns\//, data: null },
-  { method: 'get', pattern: /\/brands\/list/, data: EMPTY_LIST },
-  { method: 'get', pattern: /\/brands\/me\/media/, data: [] },
+
+  // ── Messages ──────────────────────────────────────────────────
+  { method: 'get', pattern: /\/messages\/unread-count/, data: { count: 0 } },
+  { method: 'get', pattern: /\/messages\/conversations\/[^/]+\/messages/, data: { data: [] } },
+  { method: 'get', pattern: /\/messages\/conversations/, data: { data: [] } },
+
+  // ── Notifications ─────────────────────────────────────────────
+  { method: 'get', pattern: /\/notifications\/unread-count/, data: { count: 0 } },
+  { method: 'get', pattern: /\/notifications/, data: [] },
+  { method: 'post', pattern: /\/notifications\/self/, data: {} },
+
+  // ── Matching ──────────────────────────────────────────────────
+  { method: 'get', pattern: /\/matching\/recommended/, data: [] },
+  { method: 'get', pattern: /\/matching\/campaign\//, data: [] },
+
+  // ── Search ────────────────────────────────────────────────────
   { method: 'get', pattern: /\/search\//, data: EMPTY_LIST },
+
+  // ── Payments ──────────────────────────────────────────────────
   { method: 'get', pattern: /\/payments\/history/, data: EMPTY_LIST },
+
+  // ── Verification ─────────────────────────────────────────────
+  { method: 'get', pattern: /\/verification\/status/, data: { verifications: [] } },
+  { method: 'get', pattern: /\/verification\/history/, data: [] },
+  { method: 'post', pattern: /\/verification\//, data: { status: 'pending', submittedAt: new Date().toISOString() } },
+  { method: 'post', pattern: /\/upload\/verification\//, data: { documentId: 'demo-doc', secureUrl: '' } },
+
+  // ── Social platform ───────────────────────────────────────────
+  { method: 'get', pattern: /\/social\/[^/]+\/auth-url/, data: { url: null, configured: false } },
+  { method: 'get', pattern: /\/social\/platforms\/[^/]+\/posts/, data: [] },
+
+  // ── Admin ─────────────────────────────────────────────────────
   { method: 'get', pattern: /\/admin\/(users|content|reports|audit-logs)/, data: EMPTY_LIST },
-  { method: 'get', pattern: /\/creators\/[^/]+$/, data: { ...DEMO_CREATOR_PROFILE, collaborations: [], reviews: [] } },
 ];
 
 /**
