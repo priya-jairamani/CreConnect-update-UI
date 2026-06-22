@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,75 +19,120 @@ const NAV = [
 
 export default function BrandSidebar() {
   const { logout, user } = useAuth();
-  const { unreadCount } = useNotification();
-
+  const { unreadCount }  = useNotification();
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'BR';
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('cc-sidebar-collapsed') === 'true'; } catch { return false; }
+  });
+
+  const toggle = () => {
+    setCollapsed((v) => {
+      const next = !v;
+      try { localStorage.setItem('cc-sidebar-collapsed', String(next)); } catch {}
+      return next;
+    });
+  };
+
+  const c = collapsed;
 
   return (
     <aside
-      className="w-[220px] flex-shrink-0 flex flex-col min-h-screen border-r"
-      style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+      className="flex-shrink-0 flex flex-col min-h-screen border-r transition-all duration-300"
+      style={{ width: c ? 64 : 220, background: 'var(--surface)', borderColor: 'var(--border)', overflow: 'hidden' }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
-        <Logo size={24} />
+      {/* Logo + toggle */}
+      <div
+        className="flex items-center border-b"
+        style={{ borderColor: 'var(--border)', padding: c ? '18px 0' : '18px 20px', justifyContent: c ? 'center' : 'space-between', gap: 8 }}
+      >
+        {!c && <Logo size={24} />}
+        <button
+          onClick={toggle}
+          title={c ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-fg-muted hover:text-fg transition-colors flex-shrink-0"
+          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12 }}
+        >
+          {c ? '›' : '‹'}
+        </button>
       </div>
 
       {/* User pill */}
-      <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-3 p-2 rounded-xl" style={{ background: 'var(--surface-2)' }}>
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #6d5cff, #4c2dd1)' }}
-          >
+      <div className="border-b" style={{ borderColor: 'var(--border)', padding: c ? '10px 8px' : '10px 16px' }}>
+        <div
+          className="flex items-center rounded-xl"
+          style={{ background: 'var(--surface-2)', padding: c ? '6px' : '6px 8px', gap: c ? 0 : 10, justifyContent: c ? 'center' : 'flex-start' }}
+          title={c ? (user?.email ?? 'Brand') : undefined}
+        >
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg,#6d5cff,#4c2dd1)' }}>
             {initials}
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-fg truncate">{user?.email ?? 'Brand User'}</p>
-            <p className="text-[10px] text-fg-muted">Brand account</p>
-          </div>
+          {!c && (
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-fg truncate">{user?.email ?? 'Brand User'}</p>
+              <p className="text-[10px] text-fg-muted">Brand account</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5">
-        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-widest px-2 mb-2 mt-1">Menu</p>
+      <nav className="flex-1 space-y-0.5" style={{ padding: c ? '12px 8px' : '12px' }}>
+        {!c && <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-widest px-2 mb-2 mt-1">Menu</p>}
         {NAV.map(({ icon, label, to }) => (
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+            title={c ? label : undefined}
+            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}${c ? ' !px-0 justify-center' : ''}`}
           >
-            <span className="text-base w-5 flex-shrink-0 leading-none">{icon}</span>
-            <span className="truncate">{label}</span>
+            <span className="text-base flex-shrink-0 leading-none" style={{ width: c ? 'auto' : 20 }}>{icon}</span>
+            {!c && <span className="truncate">{label}</span>}
           </NavLink>
         ))}
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t space-y-2" style={{ borderColor: 'var(--border)' }}>
-        <ThemeToggle />
+      <div className="border-t space-y-2" style={{ borderColor: 'var(--border)', padding: c ? '12px 8px' : '12px' }}>
+        <ThemeToggle variant={c ? 'icon' : 'full'} />
+
+        <NavLink
+          to={ROUTES.BRAND_REMINDERS}
+          title={c ? 'Reminders' : undefined}
+          className={({ isActive }) => `sidebar-link w-full${isActive ? ' active' : ''}${c ? ' !px-0 justify-center' : ''}`}
+        >
+          <span className="text-base flex-shrink-0" style={{ width: c ? 'auto' : 20 }}>🔔</span>
+          {!c && <span>Reminders</span>}
+        </NavLink>
+
         <NavLink
           to={ROUTES.BRAND_NOTIFICATIONS}
-          className={({ isActive }) => `sidebar-link w-full relative${isActive ? ' active' : ''}`}
+          title={c ? `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ''}` : undefined}
+          className={({ isActive }) => `sidebar-link w-full relative${isActive ? ' active' : ''}${c ? ' !px-0 justify-center' : ''}`}
         >
-          <span className="text-base w-5 flex-shrink-0">🔔</span>
-          <span>Notifications</span>
-          {unreadCount > 0 && (
-            <span
-              className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-              style={{ background: 'var(--brand-500)' }}
-            >
+          <span className="text-base flex-shrink-0 relative" style={{ width: c ? 'auto' : 20 }}>
+            🔔
+            {c && unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[8px] font-bold text-white flex items-center justify-center" style={{ background: 'var(--brand-500)' }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </span>
+          {!c && <span>Notifications</span>}
+          {!c && unreadCount > 0 && (
+            <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{ background: 'var(--brand-500)' }}>
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </NavLink>
+
         <button
           onClick={logout}
-          className="sidebar-link w-full !text-danger hover:!bg-danger/10"
+          title={c ? 'Log Out' : undefined}
+          className={`sidebar-link w-full !text-danger hover:!bg-danger/10${c ? ' !px-0 justify-center' : ''}`}
         >
-          <span className="text-base w-5 flex-shrink-0">←</span>
-          <span>Log Out</span>
+          <span className="text-base flex-shrink-0" style={{ width: c ? 'auto' : 20 }}>←</span>
+          {!c && <span>Log Out</span>}
         </button>
       </div>
     </aside>

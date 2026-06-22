@@ -20,10 +20,15 @@ export default function LoginPage() {
 
   const isValid = email.trim() && pass.trim();
 
-  // Ping backend health on mount — any HTTP response means the server is up
+  // Ping backend health — only mark online if we get real JSON back from our API
   useEffect(() => {
     axios.get(`${BASE_URL}/auth/health`, { timeout: 3000, validateStatus: () => true })
-      .then(() => setServerOnline(true))
+      .then((res) => {
+        const ct = res.headers?.['content-type'] ?? '';
+        const isJson   = ct.includes('application/json');
+        const isOurApi = res.data?.status === 'ok' || res.data?.success === true;
+        setServerOnline(isJson && isOurApi);
+      })
       .catch(() => setServerOnline(false));
   }, []);
 
@@ -178,18 +183,33 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Demo credentials hint when offline */}
-        {serverOnline === false && (
+        {/* Demo credentials — shown when server is offline OR when login fails */}
+        {(serverOnline === false || error) && (
           <div
             className="rounded-xl p-4 space-y-2"
             style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
           >
-            <p className="text-xs font-semibold text-fg-muted uppercase tracking-wide">Demo accounts (works offline)</p>
-            <div className="space-y-1.5 text-xs text-fg-muted">
-              <p><span className="text-fg">Brand:</span> techwave@creconnect.com / Brand@123</p>
-              <p><span className="text-fg">Creator:</span> laiba@creconnect.com / Creator@123</p>
-              <p><span className="text-fg">Admin:</span> admin@creconnect.com / Admin@123</p>
+            <p className="text-xs font-semibold text-fg-muted uppercase tracking-wide">
+              {serverOnline === false ? 'Demo accounts (no backend required)' : 'Try a demo account'}
+            </p>
+            <div className="space-y-1">
+              {[
+                { label: 'Brand',   email: 'techwave@creconnect.com', pass: 'Brand@123'   },
+                { label: 'Creator', email: 'laiba@creconnect.com',    pass: 'Creator@123' },
+                { label: 'Admin',   email: 'admin@creconnect.com',    pass: 'Admin@123'   },
+              ].map(({ label, email: e, pass: p }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => { setEmail(e); setPass(p); clearError(); }}
+                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-xs"
+                >
+                  <span className="text-fg font-medium">{label}:</span>{' '}
+                  <span className="text-fg-muted">{e} / {p}</span>
+                </button>
+              ))}
             </div>
+            <p className="text-[10px] text-fg-muted">Click a row to fill the form, then press Sign in.</p>
           </div>
         )}
 

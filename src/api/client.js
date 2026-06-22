@@ -46,6 +46,8 @@ function buildError(error) {
   };
 }
 
+const isDemo = () => localStorage.getItem('cc_demo_mode') === 'true';
+
 api.interceptors.response.use(
   // Unwrap the standard { success, data, timestamp } envelope
   (res) => res.data?.data !== undefined ? { ...res, data: res.data.data } : res,
@@ -53,12 +55,15 @@ api.interceptors.response.use(
     const original = error.config;
 
     // Demo mode: backend unreachable — serve mock data instead of erroring out
-    if (!error.response && localStorage.getItem('cc_demo_mode') === 'true') {
+    if (!error.response && isDemo() && original?.url) {
       const mock = getMockApiResponse(original.method, original.url);
       if (mock.data !== null) return Promise.resolve(mock);
     }
 
-    if (error.response?.status === 401 && !original._retry) {
+    // Skip token refresh entirely for demo sessions — demo tokens are not real
+    if (isDemo()) return Promise.reject(buildError(error));
+
+    if (error.response?.status === 401 && original && !original._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           queue.push({ resolve, reject });
