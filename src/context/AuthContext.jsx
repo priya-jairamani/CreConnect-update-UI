@@ -85,10 +85,24 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async ({ email, password }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
+
+    // ── Demo accounts: bypass the backend entirely ─────────────────────
+    // Checked first so demo login works whether the backend is online or not.
+    const demoAccount = findDemoAccount(email, password);
+    if (demoAccount) {
+      const { user, accessToken, refreshToken } = buildDemoSession(demoAccount);
+      localStorage.setItem(DEMO_MODE_KEY,  'true');
+      localStorage.setItem('accessToken',  accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('userId',       user.id);
+      localStorage.setItem('cc_user',      JSON.stringify(user));
+      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user, accessToken, refreshToken } });
+      return user;
+    }
+
+    // ── Real backend login ─────────────────────────────────────────────
     try {
       const { data } = await authApi.login({ email, password });
-      // Backend may return { user, accessToken, refreshToken, profile }
-      // or a flat shape { id, email, role, accessToken, refreshToken, profile }
       const user         = data?.user ?? (data?.id ? { id: data.id, email: data.email, role: data.role, status: data.status, isVerified: data.isVerified } : null);
       const accessToken  = data?.accessToken;
       const refreshToken = data?.refreshToken;
@@ -107,23 +121,6 @@ export function AuthProvider({ children }) {
       dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: { ...user, profile }, accessToken, refreshToken } });
       return { ...user, profile };
     } catch (err) {
-      // Backend unreachable — fall back to a local demo account if credentials match
-      if (err?.offline) {
-        const account = findDemoAccount(email, password);
-        if (account) {
-          const { user, accessToken, refreshToken } = buildDemoSession(account);
-
-          localStorage.setItem(DEMO_MODE_KEY, 'true');
-          localStorage.setItem('accessToken',  accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-          localStorage.setItem('userId',       user.id);
-          localStorage.setItem('cc_user',      JSON.stringify(user));
-
-          dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user, accessToken, refreshToken } });
-          return user;
-        }
-      }
-
       const msg = err?.message || 'Login failed';
       dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: { message: msg } });
       throw err;
