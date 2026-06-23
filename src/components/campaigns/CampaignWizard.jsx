@@ -38,6 +38,7 @@ const todayPlus = (days) => {
 
 const initialForm = {
   title:          '',
+  description:    '',
   objective:      'AWARENESS',
   niche:          'Fashion',
   budgetType:     'FIXED',
@@ -138,6 +139,7 @@ export default function CampaignWizard({ isOpen, onClose, onSubmit, isSubmitting
     const contentType = primaryDeliverable?.contentType ?? 'SPONSORED_POST';
     await onSubmit({
       title:       form.title,
+      description: form.description.trim() || `${form.objective} campaign for ${form.niche} creators.`,
       objective:   form.objective,
       niche:       form.niche.toUpperCase(),
       budgetType:  form.budgetType,
@@ -156,6 +158,7 @@ export default function CampaignWizard({ isOpen, onClose, onSubmit, isSubmitting
       contentType,
       deadline:    new Date(form.deadline).toISOString(),
       startDate:   new Date().toISOString(),
+      status:      'PUBLISHED',
     });
     reset();
   };
@@ -181,6 +184,16 @@ export default function CampaignWizard({ isOpen, onClose, onSubmit, isSubmitting
             placeholder="e.g. Summer Collection Launch 2026"
             required
           />
+
+          <Field label="Campaign Description" hint="Briefly describe what this campaign is about">
+            <textarea
+              className="input-base w-full resize-none"
+              rows={3}
+              value={form.description}
+              onChange={(e) => update({ description: e.target.value })}
+              placeholder="e.g. We're launching our summer collection and need creators to showcase the outfits…"
+            />
+          </Field>
 
           <Field label="Campaign Goal">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -380,16 +393,17 @@ export default function CampaignWizard({ isOpen, onClose, onSubmit, isSubmitting
           <div className="rounded-xl p-4 space-y-2" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             <h3 className="font-semibold text-fg text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Campaign Summary</h3>
             {[
-              { label: 'Name',      value: form.title || '—' },
-              { label: 'Industry',  value: form.niche },
+              { label: 'Name',        value: form.title || '—' },
+              { label: 'Description', value: form.description || '—' },
+              { label: 'Industry',    value: form.niche },
               { label: 'Platforms', value: form.platforms.join(', ') },
               { label: 'Budget',    value: `${formatPKR(form.budgetMin)} – ${formatPKR(form.budgetMax)}` },
               { label: 'Deadline',  value: form.deadline },
               { label: 'Creators',  value: `${form.creatorCount} creator${form.creatorCount !== 1 ? 's' : ''}` },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between text-sm">
-                <span className="text-fg-muted">{label}</span>
-                <span className="text-fg font-medium">{value}</span>
+              <div key={label} className="flex items-start justify-between gap-3 text-sm">
+                <span className="text-fg-muted flex-shrink-0">{label}</span>
+                <span className="text-fg font-medium text-right break-words min-w-0">{value}</span>
               </div>
             ))}
             <div className="flex items-center gap-1.5 flex-wrap pt-1">

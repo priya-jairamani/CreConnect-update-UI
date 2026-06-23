@@ -49,13 +49,24 @@ function buildError(error) {
 const isDemo = () => localStorage.getItem('cc_demo_mode') === 'true';
 
 api.interceptors.response.use(
-  // Unwrap the standard { success, data, timestamp } envelope
-  (res) => res.data?.data !== undefined ? { ...res, data: res.data.data } : res,
+  // 1. Detect HTML responses (Vercel SPA fallback, server crash page, proxy 404).
+  //    Treat them as "offline" so the demo-account fallback triggers.
+  // 2. Unwrap the standard { success, data } envelope.
+  (res) => {
+    const ct = res.headers?.['content-type'] ?? '';
+    if (ct.includes('text/html')) {
+      const err = new Error('Backend not reachable — received HTML instead of JSON.');
+      err.offline = true;
+      err.config  = res.config;
+      return Promise.reject(err);
+    }
+    return res.data?.data !== undefined ? { ...res, data: res.data.data } : res;
+  },
   async (error) => {
     const original = error.config;
 
     // Demo mode: backend unreachable — serve mock data instead of erroring out
-    if (!error.response && isDemo() && original?.url) {
+    if ((error.offline || !error.response) && isDemo() && original?.url) {
       const mock = getMockApiResponse(original.method, original.url);
       if (mock.data !== null) return Promise.resolve(mock);
     }

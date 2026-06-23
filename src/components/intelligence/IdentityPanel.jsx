@@ -37,27 +37,25 @@ export default function IdentityPanel({
               {(values.displayName || values.username || 'CC').slice(0, 2).toUpperCase()}
             </div>
           )}
-          {!readOnly && (
-            <div>
-              {uploadError && <p className="text-danger text-xs mb-1">{uploadError}</p>}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={onPhotoChange}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ background: 'var(--surface-2)', color: 'var(--fg-muted)', border: '1px solid var(--border)' }}
-              >
-                {isUploading ? 'Uploading…' : 'Change Photo'}
-              </button>
-            </div>
-          )}
+          <div>
+            {uploadError && <p className="text-danger text-xs mb-1">{uploadError}</p>}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={onPhotoChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ background: 'var(--surface-2)', color: 'var(--fg-muted)', border: '1px solid var(--border)' }}
+            >
+              {isUploading ? 'Uploading…' : 'Change Photo'}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">

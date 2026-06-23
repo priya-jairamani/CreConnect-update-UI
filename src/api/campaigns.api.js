@@ -10,4 +10,6 @@ export const campaignsApi = {
   getApplications:      (id)                    => api.get(`/campaigns/${id}/applications`),
   respondApplication:   (applicationId, action) => api.patch(`/campaigns/applications/${applicationId}/${action}`),
   withdrawApplication:  (applicationId)         => api.delete(`/campaigns/applications/${applicationId}/withdraw`),
+  invite:               (campaignId, creatorId) => api.post(`/campaigns/${campaignId}/invite`, { creatorId }),
+  respondToInvitation:  (appId, action)         => api.patch(`/campaigns/applications/${appId}/respond/${action}`),
 };

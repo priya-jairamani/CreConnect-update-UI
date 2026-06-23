@@ -61,38 +61,103 @@ export function fireReminderNotification(reminder, push) {
     createdAt: new Date().toISOString(),
   });
 
-  notificationsApi.createSelf(payload.message, payload.type).catch(() => {});
+  // Persist to backend only when not in demo mode
+  if (localStorage.getItem('cc_demo_mode') !== 'true') {
+    notificationsApi.createSelf(payload.message, payload.type).catch(() => {});
+  }
 }
 
 /**
- * On mount, scan localStorage reminders and fire notifications for any that
- * are due today, overdue, or due tomorrow. Uses an in-memory Set (not
- * localStorage) so it fires once per page load — not once per calendar day.
+ * Returns ms until the reminder's due date+time.
+ * Returns null if the reminder has no due date, is in the past, or is done.
+ */
+function msUntilDue(reminder) {
+  if (!reminder.due || reminder.done) return null;
+
+  const [year, month, day] = reminder.due.split('-').map(Number);
+  let dueMs;
+  if (reminder.time) {
+    const [h, m] = reminder.time.split(':').map(Number);
+    dueMs = new Date(year, month - 1, day, h, m, 0).getTime();
+  } else {
+    dueMs = new Date(year, month - 1, day, 9, 0, 0).getTime(); // default 9 AM
+  }
+
+  return dueMs - Date.now();
+}
+
+const ONE_HOUR = 60 * 60 * 1000;
+
+/**
+ * Watches reminders and fires notifications at the exact due time.
+ * - Uses setTimeout to fire at the precise due moment (not on every page load)
+ * - Re-fires every hour if the reminder is still not done/completed
+ * - Overdue reminders fire immediately when the hook mounts and then every hour
  */
 export function useReminderNotifications(storageKey) {
   const { push } = useNotificationContext();
-  const firedRef = useRef(new Set());
+  // In-memory set of reminder IDs where the next alert is already scheduled
+  const scheduledRef = useRef(new Set());
+  const timersRef    = useRef([]);         // cleanup on unmount
 
   useEffect(() => {
-    let reminders;
-    try { reminders = JSON.parse(localStorage.getItem(storageKey) ?? '[]'); } catch { reminders = []; }
+    function scheduleReminder(r) {
+      if (r.done || !r.due) return;
+      if (scheduledRef.current.has(r.id)) return; // already scheduled
 
-    reminders.forEach((r) => {
-      if (firedRef.current.has(r.id)) return;
-      const payload = buildPayload(r);
-      if (!payload) return;
+      const msLeft = msUntilDue(r);
 
-      firedRef.current.add(r.id);
-      push({
-        id:        `rem-${r.id}-${todayStr()}`,
-        type:      payload.type,
-        message:   payload.message,
-        isRead:    false,
-        createdAt: new Date().toISOString(),
-      });
+      if (msLeft === null) return;
 
-      notificationsApi.createSelf(payload.message, payload.type).catch(() => {});
-    });
+      if (msLeft <= 0) {
+        // Already overdue or due right now — fire immediately
+        fireReminderNotification(r, push);
+        scheduledRef.current.add(r.id);
+
+        // Re-check in 1 hour in case it's still not done
+        const t = setTimeout(() => {
+          scheduledRef.current.delete(r.id);
+          const reminders = readReminders();
+          const fresh = reminders.find((x) => x.id === r.id);
+          if (fresh && !fresh.done) {
+            scheduleReminder(fresh);
+          }
+        }, ONE_HOUR);
+        timersRef.current.push(t);
+      } else {
+        // Fire exactly when due
+        scheduledRef.current.add(r.id);
+        const t = setTimeout(() => {
+          const reminders = readReminders();
+          const fresh = reminders.find((x) => x.id === r.id);
+          if (fresh && !fresh.done) {
+            fireReminderNotification(fresh, push);
+            // Re-schedule 1 hour later if still not done
+            const retryT = setTimeout(() => {
+              scheduledRef.current.delete(r.id);
+              const again = readReminders().find((x) => x.id === r.id);
+              if (again && !again.done) scheduleReminder(again);
+            }, ONE_HOUR);
+            timersRef.current.push(retryT);
+          } else {
+            scheduledRef.current.delete(r.id);
+          }
+        }, msLeft);
+        timersRef.current.push(t);
+      }
+    }
+
+    function readReminders() {
+      try { return JSON.parse(localStorage.getItem(storageKey) ?? '[]'); } catch { return []; }
+    }
+
+    const reminders = readReminders();
+    reminders.forEach(scheduleReminder);
+
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [storageKey]);
 }

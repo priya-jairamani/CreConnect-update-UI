@@ -6,6 +6,7 @@ export const creatorsApi = {
   getStats:          ()              => api.get('/creators/me/stats'),
   getCollaborations: (params)        => api.get('/creators/me/collaborations', { params }),
   getOffers:         ()              => api.get('/creators/me/offers'),
+  getApplications:   ()              => api.get('/creators/me/applications'),
   addPlatform:       (data)          => api.post('/creators/me/platforms', data),
   removePlatform:    (id)            => api.delete(`/creators/me/platforms/${id}`),
   getPublicProfile:  (username)      => api.get(`/creators/${username}`),

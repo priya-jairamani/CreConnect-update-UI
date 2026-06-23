@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import Drawer from '@/components/common/Drawer';
 import Badge from '@/components/common/Badge';
@@ -6,7 +6,8 @@ import Button from '@/components/common/Button';
 import Avatar from '@/components/common/Avatar';
 import Skeleton from '@/components/common/Skeleton';
 import { campaignsApi } from '@/api/campaigns.api';
-import { formatPKR } from '@/utils/formatters';
+import { searchApi } from '@/api/search.api';
+import { formatPKR, formatFollowers } from '@/utils/formatters';
 
 /* ─── tiny helpers ─────────────────────────────────────────── */
 
@@ -66,10 +67,63 @@ function DeliverableChip({ icon, label, count }) {
 /* ─── main component ────────────────────────────────────────── */
 
 export default function CampaignDetailDrawer({ campaign, isOpen, onClose, onUpdate }) {
+
   const [applications,  setApplications]  = useState([]);
   const [isLoadingApps, setIsLoadingApps] = useState(false);
   const [isUpdating,    setIsUpdating]    = useState(false);
   const [respondingId,  setRespondingId]  = useState(null);
+
+  // ── Invite creators ────────────────────────────────────────────
+  const [inviteOpen,    setInviteOpen]    = useState(false);
+  const [inviteQuery,   setInviteQuery]   = useState('');
+  const [inviteResults, setInviteResults] = useState([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const inviteTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!inviteOpen) return;
+    clearTimeout(inviteTimerRef.current);
+    inviteTimerRef.current = setTimeout(async () => {
+      setInviteLoading(true);
+      try {
+        const params = {};
+        if (inviteQuery.trim()) params.q = inviteQuery.trim();
+        const { data } = await searchApi.creators(params);
+        setInviteResults(Array.isArray(data) ? data : (data?.data ?? []));
+      } catch {
+        setInviteResults([]);
+      } finally {
+        setInviteLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(inviteTimerRef.current);
+  }, [inviteQuery, inviteOpen]);
+
+  const [invitingId, setInvitingId] = useState(null);
+  const [invitedIds, setInvitedIds] = useState(new Set());
+
+  // Creator profile IDs that already have any application/invitation for this campaign
+  const alreadyEngagedIds = useMemo(
+    () => new Set(applications.map((a) => a.creatorId ?? a.creator?.id).filter(Boolean)),
+    [applications]
+  );
+
+  const handleInviteCreator = async (creator) => {
+    const profileId = creator.id;
+    setInvitingId(profileId);
+    try {
+      const { data: newApp } = await campaignsApi.invite(campaign.id, profileId);
+      setInvitedIds((prev) => new Set([...prev, profileId]));
+      // Add the new invitation directly to the applications list
+      if (newApp?.id) {
+        setApplications((prev) => [...prev, { ...newApp, creator }]);
+      }
+    } catch {
+      // fail silently — user can retry
+    } finally {
+      setInvitingId(null);
+    }
+  };
 
   const loadApplications = useCallback(async () => {
     if (!campaign?.id) return;
@@ -88,6 +142,10 @@ export default function CampaignDetailDrawer({ campaign, isOpen, onClose, onUpda
     if (isOpen && campaign?.id) {
       setApplications([]);
       loadApplications();
+      setInvitedIds(new Set());
+      setInviteOpen(false);
+      setInviteQuery('');
+      setInviteResults([]);
     }
   }, [isOpen, campaign?.id, loadApplications]);
 
@@ -253,6 +311,86 @@ export default function CampaignDetailDrawer({ campaign, isOpen, onClose, onUpda
           )}
         </Section>
 
+        {/* ── Invite Creators ───────────────────────────────────── */}
+        <Section title="Invite Creators">
+          {!inviteOpen ? (
+            <Button variant="secondary" size="sm" onClick={() => setInviteOpen(true)}>
+              + Find &amp; Invite Creators
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              {/* Search input */}
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  value={inviteQuery}
+                  onChange={(e) => setInviteQuery(e.target.value)}
+                  placeholder="Search by name or username…"
+                  className="input-base flex-1"
+                />
+                <Button variant="ghost" size="sm" onClick={() => { setInviteOpen(false); setInviteQuery(''); setInviteResults([]); }}>
+                  ✕
+                </Button>
+              </div>
+
+              {/* Results */}
+              {inviteLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
+                </div>
+              ) : inviteResults.filter((cr) => !invitedIds.has(cr.id) && !alreadyEngagedIds.has(cr.id)).length === 0 ? (
+                <p className="text-fg-muted text-xs text-center py-4">
+                  {inviteResults.length > 0
+                    ? 'All matching creators have already applied or been invited to this campaign.'
+                    : inviteQuery ? 'No creators found.' : 'Start typing to search creators.'}
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {inviteResults.filter((cr) => !invitedIds.has(cr.id) && !alreadyEngagedIds.has(cr.id)).map((cr) => (
+                    <div
+                      key={cr.id}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                    >
+                      <Avatar
+                        src={cr.avatarUrl}
+                        initials={(cr.displayName || cr.username || '?').slice(0, 2).toUpperCase()}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-fg text-xs font-semibold truncate">
+                          {cr.displayName || cr.username}
+                        </p>
+                        <p className="text-fg-muted text-[10px]">
+                          {cr.niche} · {formatFollowers(cr.followerCount || 0)} followers
+                        </p>
+                      </div>
+                      {invitedIds.has(cr.id) ? (
+                        <span className="text-[10px] font-semibold px-2 py-1 rounded-lg" style={{ background: 'rgba(22,179,100,0.12)', color: '#16b364' }}>
+                          ✓ Sent
+                        </span>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="xs"
+                          isLoading={invitingId === cr.id}
+                          onClick={() => handleInviteCreator(cr)}
+                        >
+                          Invite
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[10px] text-fg-muted">
+                The creator will receive a notification about this campaign and can apply directly.
+              </p>
+            </div>
+          )}
+        </Section>
+
         {/* ── Applications ──────────────────────────────────────── */}
         <Section title={`Applications${applications.length ? ` (${applications.length})` : ''}`}>
           {isLoadingApps ? (
@@ -295,8 +433,12 @@ export default function CampaignDetailDrawer({ campaign, isOpen, onClose, onUpda
                       </p>
                     </div>
                     <Badge
-                      variant={app.status === 'ACCEPTED' ? 'success' : app.status === 'REJECTED' ? 'danger' : 'warning'}
-                      label={app.status.charAt(0) + app.status.slice(1).toLowerCase()}
+                      variant={
+                        app.status === 'ACCEPTED' ? 'success' :
+                        app.status === 'REJECTED' ? 'danger'  :
+                        app.status === 'INVITED'  ? 'brand'   : 'warning'
+                      }
+                      label={app.status === 'INVITED' ? 'Invited' : app.status.charAt(0) + app.status.slice(1).toLowerCase()}
                     />
                     {app.status === 'PENDING' && (
                       <div className="flex gap-1.5 flex-shrink-0">

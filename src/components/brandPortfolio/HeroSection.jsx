@@ -21,8 +21,8 @@ export default function HeroSection({
           <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #857fff 0%, #4c2dd1 100%)' }} />
         )}
       </div>
-      <div className="p-5 sm:p-6 -mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
-        <div className="rounded-full border-4" style={{ borderColor: 'var(--surface)' }}>
+      <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-end gap-4 -mt-10">
+        <div className="rounded-full border-4 flex-shrink-0 relative z-10" style={{ borderColor: 'var(--surface)' }}>
           <Avatar src={brand.logoUrl} initials={brand.companyName?.slice(0, 2)?.toUpperCase()} size="2xl" />
         </div>
         <div className="min-w-0 flex-1">
