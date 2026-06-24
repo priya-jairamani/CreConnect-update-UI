@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import { processCopilotMessage } from '@/utils/copilotEngine';
+import { copilotApi } from '@/api/copilot.api';
 
 const SUGGESTIONS_BY_ROLE = {
   brand: [
@@ -42,23 +42,32 @@ export default function AICopilot({ role }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const send = (text) => {
+  const send = async (text) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
     const userMsg = { id: `u-${Date.now()}`, sender: 'user', text: trimmed };
     setMessages((m) => [...m, userMsg]);
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const result = processCopilotMessage(trimmed, { role });
-      const assistantMsg = { id: `a-${Date.now()}`, sender: 'assistant', text: result.reply };
+    try {
+      const { data } = await copilotApi.chat(trimmed, { role });
+      const result   = data || {};
+      const assistantMsg = { id: `a-${Date.now()}`, sender: 'assistant', text: result.reply || 'Sorry, something went wrong.' };
       setMessages((m) => [...m, assistantMsg]);
-      setIsTyping(false);
       if (result.action?.type === 'navigate') {
         setTimeout(() => navigate(result.action.to), 400);
       }
-    }, 500 + Math.random() * 400);
+    } catch (err) {
+      const offline = err?.offline;
+      const errMsg = offline
+        ? "I can't reach the server right now. Check that the backend is running."
+        : err?.message || 'Something went wrong. Please try again.';
+      setMessages((m) => [...m, { id: `e-${Date.now()}`, sender: 'assistant', text: errMsg }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleSubmit = (e) => {

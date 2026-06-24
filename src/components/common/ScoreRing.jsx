@@ -30,7 +30,7 @@ export default function ScoreRing({ value, size = 56, strokeWidth = 6 }) {
           cy={center}
           r={r}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="var(--border)"
           strokeWidth={strokeWidth}
         />
         {/* Progress */}
@@ -53,7 +53,7 @@ export default function ScoreRing({ value, size = 56, strokeWidth = 6 }) {
           fontFamily: 'Sora, sans-serif',
           fontWeight: 700,
           fontSize,
-          color: '#f2f4fb',
+          color: 'var(--fg)',
           lineHeight: 1,
         }}
       >
